@@ -1,0 +1,4 @@
+(a implies b) dimplies (neg b implies a)
+(c and (d or e))
+(neg a or (b implies c))
+
