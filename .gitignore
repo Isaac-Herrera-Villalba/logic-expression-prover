@@ -1,5 +1,7 @@
+.git
 *.aux
 *.log
 *.pdf
 *.tex
+queries.pl
 
