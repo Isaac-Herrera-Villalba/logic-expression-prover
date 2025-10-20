@@ -3,5 +3,5 @@
 *.log
 *.pdf
 *.tex
-queries.pl
+/tmp/queries.pl
 

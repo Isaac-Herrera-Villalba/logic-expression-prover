@@ -1,10 +1,21 @@
+% Ejemplo de archivo de consultas
+% Comentario de una sola línea
+
+p or neg p           % Tautología
+(a -> a)             % Siempre verdadero
+
+/* Comentario
+   de varias
+   líneas
+*/
+
+(a and b) -> a       % Verdadero si a y b son verdaderos
 (a implies b) dimplies (neg b implies a)
 (c and (d or e))
-p or neg p
-p and neg p
 
-(a -> b) <-> (¬b -> a)
-(c ∧ (d ∨ e))
-p ∨ ¬p
-p ∧ ¬p
+% Ejemplos adicionales para verificar falsedad y verdad
+p and neg p           % Contradicción (falso)
+(a implies (b and neg b))  % Contradicción
+(true)                % Verdadero
+(false)               % Falso
 

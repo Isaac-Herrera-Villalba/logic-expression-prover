@@ -1,30 +1,41 @@
+% ------------------------------------------------------------
 % main.pl
 % ------------------------------------------------------------
-% Programa principal (solo lectura y parseo por ahora)
-% Lee queries.txt y muestra las fórmulas parseadas.
+:- module(main, [run_all/0]).
+:- use_module(semantics).
+
 % ------------------------------------------------------------
-:- use_module(parser).
-:- use_module(library(readutil)).
+% Ejecutar todo el proceso:
+%   - Cargar queries.pl
+%   - Evaluar tautologías
+%   - Generar reporte LaTeX
+% ------------------------------------------------------------
 
-main :-
-    File = 'queries.txt',
-    ( exists_file(File)
-    ->  read_file_to_string(File, Content, []),
-        split_string(Content, "\n", "\s\t\r", Lines),
-        process_lines(Lines, 1),
-        halt
-    ;   format('No se encontró ~w~n', [File]),
-        halt(1)
+run_all :-
+    QueriesFile = 'tmp/queries.pl',
+    OutFile = 'output/report.tex',
+    (exists_file(QueriesFile) ->
+        consult(QueriesFile),
+        open(OutFile, write, S),
+        format(S, '\\documentclass[12pt]{article}~n', []),
+        format(S, '\\usepackage[utf8]{inputenc}~n', []),
+        format(S, '\\usepackage{amsmath,amssymb}~n', []),
+        format(S, '\\begin{document}~n', []),
+        format(S, '\\section*{Resultados de las fórmulas lógicas}~n~n', []),
+        forall(query(F),
+            (
+                (semantics:tautology(F) ->
+                    format(S, '\\( ~w \\) es una \\textbf{tautología}.~n~n', [F])
+                ;
+                    format(S, '\\( ~w \\) \\textbf{no} es una tautología.~n~n', [F])
+                )
+            )
+        ),
+        format(S, '\\end{document}~n', []),
+        close(S),
+        writeln('Archivo generado: output/report.tex')
+    ;
+        writeln('No se encontró el archivo tmp/queries.pl.'),
+        fail
     ).
-
-process_lines([], _).
-process_lines([L|Ls], N) :-
-    ( parser:parse_formula(L, F) ->
-        format('Línea ~d: OK  →  ~w~n', [N, F])
-    ; L = "" ->
-        true  % ignorar líneas vacías
-    ; format('Línea ~d: ERROR al parsear → "~s"~n', [N, L])
-    ),
-    N2 is N + 1,
-    process_lines(Ls, N2).
 
