@@ -1,125 +1,52 @@
+% -----------------------------------------
 % prover.pl
-% Simple sequent calculus prover (constructs proof trees)
-:- module(prover, [prove_formula/3]).
-:- use_module(parser).
+% Módulo principal de evaluación lógica
+% -----------------------------------------
 
-% proof tree representation:
-% proof(Sequent, RuleName, Subs) where Subs is list of child proofs.
-% Sequent: sequent(LeftList, RightList) where lists of formulas
+:- module(prover, [run_all/0]).
+:- dynamic query/1.
 
-% Top-level: attempt to prove ⊢ F  (i.e., Left=[], Right=[F])
-% Depth-limited search to avoid infinite loops.
-prove_formula(F, Proof, ok) :-
-    DepthLimit = 10,
-    initial_sequent(Seq, F),
-    prove(Seq, DepthLimit, [], Proof),
-    !.
-prove_formula(_, _, fail).
+% Cargar las queries generadas por Python
+load_queries(File) :-
+    exists_file(File),
+    consult(File),
+    writeln('✔ Consultadas las queries desde:'), writeln(File).
 
-initial_sequent(sequent([], [F]), F).
+% Evaluar una sola fórmula
+evaluate(Query, Result) :-
+    ( prove(Query) -> Result = true ; Result = false ).
 
-% prove(Sequent, Depth, Visited, proof(...))
-prove(Sequent, _, _, proof(Sequent, axiom, [])) :-
-    Sequent = sequent(L, R),
-    member(X, L), member(Y, R), X == Y, !.   % axiom: A ⊢ A
+% Semántica básica de operadores lógicos
+prove(and(A, B)) :- prove(A), prove(B).
+prove(or(A, _)) :- prove(A), !.
+prove(or(_, B)) :- prove(B).
+prove(implies(A, B)) :- \+ prove(A) ; prove(B).
+prove(dimplies(A, B)) :- prove(implies(A, B)), prove(implies(B, A)).
+prove(neg(A)) :- \+ prove(A).
+prove(true).
+prove(_):- fail.
 
-prove(Sequent, Depth, _Visited, proof(Sequent, 'neg-left', [P])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(neg(A), L, Lrest), !,
-    % rule: from Γ ⊢ A, Δ  infer  ¬A, Γ ⊢ Δ
-    NewSeq = sequent(Lrest, [A|R]),
-    D2 is Depth - 1,
-    prove(NewSeq, D2, [], P).
+% Procesar todas las queries
+process_queries :-
+    forall(query(Q), (
+        evaluate(Q, R),
+        format('\\( ~w \\) : ~w~n', [Q, R])
+    )).
 
-prove(Sequent, Depth, _Visited, proof(Sequent, 'neg-right', [P])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(neg(A), R, Rrest), !,
-    % rule: from A, Γ ⊢ Δ  infer Γ ⊢ ¬A, Δ
-    NewSeq = sequent([A|L], Rrest),
-    D2 is Depth - 1,
-    prove(NewSeq, D2, [], P).
-
-% and-left: (A ∧ B), Γ ⊢ Δ  from A,B,Γ ⊢ Δ
-prove(Sequent, Depth, _V, proof(Sequent, 'and-left', [P])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(and(A,B), L, Lrest), !,
-    NewSeq = sequent([A,B|Lrest], R),
-    D2 is Depth - 1,
-    prove(NewSeq, D2, [], P).
-
-% and-right: Γ ⊢ A and B, Δ  from Γ ⊢ A,Δ  and Γ ⊢ B,Δ  (two subproofs)
-prove(Sequent, Depth, _V, proof(Sequent, 'and-right', [P1,P2])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(and(A,B), R, Rrest), !,
-    New1 = sequent(L, [A|Rrest]),
-    New2 = sequent(L, [B|Rrest]),
-    D2 is Depth - 1,
-    prove(New1, D2, [], P1),
-    prove(New2, D2, [], P2).
-
-% or-left: A ∨ B, Γ ⊢ Δ  from A,Γ ⊢ Δ  and B,Γ ⊢ Δ
-prove(Sequent, Depth, _V, proof(Sequent, 'or-left', [P1,P2])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(or(A,B), L, Lrest), !,
-    New1 = sequent([A|Lrest], R),
-    New2 = sequent([B|Lrest], R),
-    D2 is Depth - 1,
-    prove(New1, D2, [], P1),
-    prove(New2, D2, [], P2).
-
-% or-right: Γ ⊢ A ∨ B, Δ from Γ ⊢ A, B, Δ (single rule)
-prove(Sequent, Depth, _V, proof(Sequent, 'or-right', [P])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(or(A,B), R, Rrest), !,
-    New = sequent(L, [A,B|Rrest]),
-    D2 is Depth - 1,
-    prove(New, D2, [], P).
-
-% implies-left: (A -> B), Γ ⊢ Δ  from Γ ⊢ A,Δ and B,Γ ⊢ Δ
-prove(Sequent, Depth, _V, proof(Sequent, 'implies-left', [P1,P2])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(implies(A,B), L, Lrest), !,
-    New1 = sequent(Lrest, [A|R]),   % Γ ⊢ A, Δ
-    New2 = sequent([B|Lrest], R),   % B, Γ ⊢ Δ
-    D2 is Depth - 1,
-    prove(New1, D2, [], P1),
-    prove(New2, D2, [], P2).
-
-% implies-right: Γ ⊢ A -> B, Δ  from A, Γ ⊢ B, Δ
-prove(Sequent, Depth, _V, proof(Sequent, 'implies-right', [P])) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    select(implies(A,B), R, Rrest), !,
-    New = sequent([A|L], [B|Rrest]),
-    D2 is Depth - 1,
-    prove(New, D2, [], P).
-
-% dimplies / biconditional: treat as (A->B) and (B->A)
-prove(Sequent, Depth, V, proof(Sequent, 'dimplies', Subs)) :-
-    Depth > 0,
-    Sequent = sequent(L, R),
-    ( select(dimplies(A,B), L, Lrest) ->
-        % expand on left as two conjucts
-        NewL = [implies(A,B), implies(B,A) | Lrest],
-        NewSeq = sequent(NewL, R),
-        D2 is Depth - 1,
-        prove(NewSeq, D2, V, P), Subs = [P]
-    ; select(dimplies(A,B), R, Rrest) ->
-        % on right: need to prove ⊢ (A<->B) by showing both directions on right
-        New = sequent(L, [implies(A,B), implies(B,A) | Rrest]),
-        D2 is Depth - 1,
-        prove(New, D2, V, P), Subs = [P]
-    ).
-
-% fallback: try weakening or exchange by moving same atoms (very naive)
-prove(_Sequent, _Depth, _V, _) :-
-    % if no rule matched, fail
-    fail.
+% Ejecutar todo el proceso y generar LaTeX
+run_all :-
+    load_queries('tmp/queries.pl'),
+    open('output/report.tex', write, Stream),
+    with_output_to(Stream, (
+        format('\\documentclass[12pt]{article}~n'),
+        format('\\usepackage[utf8]{inputenc}~n'),
+        format('\\usepackage{amsmath,amssymb}~n'),
+        format('\\begin{document}~n'),
+        format('\\section*{Resultados de las fórmulas lógicas}~n'),
+        format('\\noindent~n'),
+        process_queries,
+        format('\\end{document}~n')
+    )),
+    close(Stream),
+    writeln('✅ Archivo generado: output/report.tex').
 
