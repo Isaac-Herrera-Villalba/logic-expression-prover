@@ -1,12 +1,17 @@
+% queries.txt
 % Ejemplo de archivo de consultas
 % Comentario de una sola línea
+
+a and (b or c) <-> (a and b) or (a and c)
+neg(a and b) <-> (neg a or neg b)
 
 p or neg p           % Tautología
 (a -> a)             % Siempre verdadero
 
-/* Comentario
-   de varias
-   líneas
+/* 
+Comentario
+de varias
+líneas
 */
 
 (a and b) -> a       % Verdadero si a y b son verdaderos
@@ -16,6 +21,5 @@ p or neg p           % Tautología
 % Ejemplos adicionales para verificar falsedad y verdad
 p and neg p           % Contradicción (falso)
 (a implies (b and neg b))  % Contradicción
-(true)                % Verdadero
-(false)               % Falso
+% --------------------------------------------------
 

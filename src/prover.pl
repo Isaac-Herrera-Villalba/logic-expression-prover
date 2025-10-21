@@ -1,52 +1,62 @@
-% -----------------------------------------
-% prover.pl
-% Módulo principal de evaluación lógica
-% -----------------------------------------
+/*
+prover.pl
+--------------------------------------------------
+Módulo de razonamiento lógico (Prover)
+--------------------------------------------------
+*/
 
-:- module(prover, [run_all/0]).
-:- dynamic query/1.
+:- module(prover, [prove/1]).
+:- use_module('src/semantics.pl').
 
-% Cargar las queries generadas por Python
-load_queries(File) :-
-    exists_file(File),
-    consult(File),
-    writeln('✔ Consultadas las queries desde:'), writeln(File).
+/*
+--------------------------------------------------
+Declaración de operadores lógicos
+--------------------------------------------------
+*/
 
-% Evaluar una sola fórmula
-evaluate(Query, Result) :-
-    ( prove(Query) -> Result = true ; Result = false ).
+:- op(1,  fx,  neg).
+:- op(2, xfy,  and).
+:- op(2, xfy,  or).
+:- op(2, xfy,  implies).
+:- op(2, xfy,  dimplies).
 
-% Semántica básica de operadores lógicos
-prove(and(A, B)) :- prove(A), prove(B).
-prove(or(A, _)) :- prove(A), !.
-prove(or(_, B)) :- prove(B).
-prove(implies(A, B)) :- \+ prove(A) ; prove(B).
-prove(dimplies(A, B)) :- prove(implies(A, B)), prove(implies(B, A)).
-prove(neg(A)) :- \+ prove(A).
-prove(true).
-prove(_):- fail.
+/*
+--------------------------------------------------
+Probar una expresión booleana bajo todas las interpretaciones
+--------------------------------------------------
+*/
+prove(Expr) :-
+    get_atoms(Expr, Atoms),
+    all_interpretations(Atoms, Interps),
+    forall(member(Interp, Interps),
+           ( eval(Expr, Interp, true) )).
 
-% Procesar todas las queries
-process_queries :-
-    forall(query(Q), (
-        evaluate(Q, R),
-        format('\\( ~w \\) : ~w~n', [Q, R])
-    )).
+/*
+--------------------------------------------------
+Obtención de átomos (variables lógicas)
+--------------------------------------------------
+*/
+get_atoms(Expr, Atoms) :-
+    get_atoms(Expr, [], Raw),
+    sort(Raw, Atoms).
 
-% Ejecutar todo el proceso y generar LaTeX
-run_all :-
-    load_queries('tmp/queries.pl'),
-    open('output/report.tex', write, Stream),
-    with_output_to(Stream, (
-        format('\\documentclass[12pt]{article}~n'),
-        format('\\usepackage[utf8]{inputenc}~n'),
-        format('\\usepackage{amsmath,amssymb}~n'),
-        format('\\begin{document}~n'),
-        format('\\section*{Resultados de las fórmulas lógicas}~n'),
-        format('\\noindent~n'),
-        process_queries,
-        format('\\end{document}~n')
-    )),
-    close(Stream),
-    writeln('✅ Archivo generado: output/report.tex').
+get_atoms(neg(A), Acc, Out) :- !, get_atoms(A, Acc, Out).
+get_atoms(A and B, Acc, Out) :- !, get_atoms(A, Acc, T1), get_atoms(B, T1, Out).
+get_atoms(A or B, Acc, Out) :- !, get_atoms(A, Acc, T1), get_atoms(B, T1, Out).
+get_atoms(A implies B, Acc, Out) :- !, get_atoms(A, Acc, T1), get_atoms(B, T1, Out).
+get_atoms(A dimplies B, Acc, Out) :- !, get_atoms(A, Acc, T1), get_atoms(B, T1, Out).
+get_atoms(A, Acc, [A | Acc]) :- atom(A).
+
+/*
+--------------------------------------------------
+Generar todas las interpretaciones posibles
+--------------------------------------------------
+*/
+all_interpretations([], [[]]).
+all_interpretations([A | As], Interps) :-
+    all_interpretations(As, Rest),
+    findall([(A, true) | R], member(R, Rest), T1),
+    findall([(A, false) | R], member(R, Rest), T2),
+    append(T1, T2, Interps).
+% --------------------------------------------------
 

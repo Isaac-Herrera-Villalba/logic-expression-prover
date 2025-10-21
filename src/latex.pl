@@ -1,6 +1,8 @@
-% latex.pl
-% ------------------------------------------------------------
-% Convert proof tree into LaTeX using bussproofs
+/*
+latex.pl
+------------------------------------------------------------
+Convert proof tree into LaTeX using bussproofs
+*/
 
 :- module(latex, [
     start_latex_report/1,
@@ -74,5 +76,5 @@ write_formula(S, dimplies(A,B)) :-
     format(S, ' ~w ', [Sym]),
     write_formula(S, B),
     write(S, ')').
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ------------------------------------------------------------
 

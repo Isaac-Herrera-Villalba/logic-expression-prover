@@ -1,16 +1,22 @@
-% semantics.pl
+/*
+semantics.pl
+------------------------------
+*/
 :- module(semantics, [tautology/1, eval_formula/3]).
 :- use_module(logic).
 
-% ------------------------------
-% Evaluador semántico de fórmulas
-% ------------------------------
+/*
+------------------------------
+Evaluador semántico de fórmulas
+------------------------------
+*/
+eval_formula(atom(X), Val, V) :-
+    member(X=V, Val), !.
 
-eval_formula(atom(X), Val, true)  :- member(X=true, Val), !.
-eval_formula(atom(X), Val, false) :- member(X=false, Val), !.
-
-eval_formula(neg(F), Val, true)  :- eval_formula(F, Val, false), !.
-eval_formula(neg(F), Val, false) :- eval_formula(F, Val, true), !.
+eval_formula(neg(F), Val, true)  :-
+    eval_formula(F, Val, false), !.
+eval_formula(neg(F), Val, false) :-
+    eval_formula(F, Val, true), !.
 
 eval_formula(and(A,B), Val, true)  :-
     eval_formula(A, Val, true),
@@ -32,7 +38,6 @@ eval_formula(dimplies(A,B), Val, true) :-
     VA = VB, !.
 eval_formula(dimplies(_, _), _, false).
 
-% ------------------------------
 % tautología = true para todas las asignaciones posibles
 tautology(F) :-
     logic:atoms(F, Atoms),
