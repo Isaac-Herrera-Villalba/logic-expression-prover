@@ -47,8 +47,7 @@ full: parse run latex view
 
 clean:
 	@echo "Eliminando archivos generados..."
-	find $(TMP_DIR) -type f -delete 2>/dev/null || true
-	find $(OUT_DIR) -type f -delete 2>/dev/null || true
-	@echo "Limpieza completa (directorios conservados)."
+	rm -rf $(TMP_DIR)
+	rm -rf $(OUT_DIR)
 ############################################
 
