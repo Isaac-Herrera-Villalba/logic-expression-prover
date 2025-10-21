@@ -1,15 +1,19 @@
-% ------------------------------------------------------------
-% main.pl
-% ------------------------------------------------------------
+/*
+main.pl
+------------------------------------------------------------
+*/
+
 :- module(main, [run_all/0]).
 :- use_module(semantics).
 
-% ------------------------------------------------------------
-% Ejecutar todo el proceso:
-%   - Cargar queries.pl
-%   - Evaluar tautologías
-%   - Generar reporte LaTeX
-% ------------------------------------------------------------
+/*
+ ------------------------------------------------------------
+Ejecutar todo el proceso:
+  - Cargar queries.pl
+  - Evaluar tautologías
+  - Generar reporte LaTeX
+------------------------------------------------------------
+*/
 
 run_all :-
     QueriesFile = 'tmp/queries.pl',
@@ -38,4 +42,5 @@ run_all :-
         writeln('No se encontró el archivo tmp/queries.pl.'),
         fail
     ).
+% ------------------------------------------------------------
 

@@ -50,4 +50,5 @@ clean:
 	find $(TMP_DIR) -type f -delete 2>/dev/null || true
 	find $(OUT_DIR) -type f -delete 2>/dev/null || true
 	@echo "Limpieza completa (directorios conservados)."
+############################################
 
