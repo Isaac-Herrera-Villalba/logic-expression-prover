@@ -109,7 +109,8 @@ indent(Depth, Indent) :-
 formula_to_tex(atom(X), T) :- format(atom(T), '~w', [X]).
 formula_to_tex(neg(X), T) :-
     formula_to_tex(X, TX),
-    format(atom(T), '\\neg~w', [TX]).
+    format(atom(T), '(\\neg ~w)', [TX]).
+
 formula_to_tex(and(A,B), T) :-
     formula_to_tex(A, TA),
     formula_to_tex(B, TB),
