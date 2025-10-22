@@ -1,5 +1,7 @@
-% queries.txt
-% Ejemplo de archivo de consultas
+/* 
+queries.txt
+Ejemplo de archivo de consultas
+*/
 % Comentario de una sola línea
 
 a and (b or c) <-> (a and b) or (a and c)

@@ -1,21 +1,26 @@
 /*
-latex.pl
+src/latex.pl
 ------------------------------------------------------------
 Convert proof tree into LaTeX using bussproofs
 */
 
 :- module(latex, [
     start_latex_report/1,
-    add_formula/3,
+    add_formula/3,     % para fórmulas simples (sin árbol)
+    add_formula/4,     % para fórmulas verdaderas con árbol de derivación
     finish_latex_report/1
 ]).
 
+% Símbolos lógicos para LaTeX
 symbol(and, '\\land').
 symbol(or, '\\lor').
 symbol(neg, '\\lnot').
 symbol(implies, '\\rightarrow').
 symbol(dimplies, '\\leftrightarrow').
 
+% ------------------------------------------------------------
+% Inicio del reporte LaTeX
+% ------------------------------------------------------------
 start_latex_report(Path) :-
     open(Path, write, S),
     write(S, '\\documentclass[12pt]{article}\n'),
@@ -25,29 +30,57 @@ start_latex_report(Path) :-
     write(S, '\\section*{Resultados de las fórmulas lógicas}\n'),
     close(S).
 
+% ------------------------------------------------------------
+% Añadir fórmula al reporte (sin árbol)
+% ------------------------------------------------------------
 add_formula(Path, Formula, true) :-
     open(Path, append, S),
     write(S, '\\noindent\n'),
-    write(S, '\\( '), write_formula(S, Formula), write(S, ' \\)'),
+    write(S, '\\( '),
+    write_formula(S, Formula),
+    write(S, ' \\)'),
     write(S, ' \\;\\Rightarrow\\; \\textbf{Verdadero}\\\\[6pt]\n'),
     close(S).
+
 add_formula(Path, Formula, false) :-
     open(Path, append, S),
     write(S, '\\noindent\n'),
-    write(S, '\\( '), write_formula(S, Formula), write(S, ' \\)'),
+    write(S, '\\( '),
+    write_formula(S, Formula),
+    write(S, ' \\)'),
     write(S, ' \\;\\Rightarrow\\; \\textbf{Falso}\\\\[6pt]\n'),
     close(S).
 
-finish_latex_report(Path) :-
+% ------------------------------------------------------------
+% Añadir fórmula al reporte con árbol de derivación
+% ------------------------------------------------------------
+add_formula(Path, Formula, true, Tree) :-
     open(Path, append, S),
-    write(S, '\\end{document}\n'),
+    write(S, '\\noindent\n'),
+    write(S, '\\( '),
+    write_formula(S, Formula),
+    write(S, ' \\)'),
+    write(S, ' \\;\\Rightarrow\\; \\textbf{Verdadero}\\\\[6pt]\n'),
+    write_derivation(S, Tree),
     close(S).
 
+% ------------------------------------------------------------
+% Función recursiva para imprimir árbol de derivación en LaTeX con \overline{}
+% ------------------------------------------------------------
+write_derivation(S, tree(F, Subs)) :-
+    format(S, '\\overline{~w}\\\\\n', [F]),
+    forall(member(Sub, Subs), write_derivation(S, Sub)).
+
+% ------------------------------------------------------------
+% Función para imprimir fórmulas en notación bonita
+% ------------------------------------------------------------
 write_formula(S, atom(X)) :- write(S, X).
+
 write_formula(S, neg(F)) :-
     symbol(neg, Sym),
     format(S, '~w ', [Sym]),
     write_formula(S, F).
+
 write_formula(S, and(A,B)) :-
     write(S, '('),
     write_formula(S, A),
@@ -55,6 +88,7 @@ write_formula(S, and(A,B)) :-
     format(S, ' ~w ', [Sym]),
     write_formula(S, B),
     write(S, ')').
+
 write_formula(S, or(A,B)) :-
     write(S, '('),
     write_formula(S, A),
@@ -62,6 +96,7 @@ write_formula(S, or(A,B)) :-
     format(S, ' ~w ', [Sym]),
     write_formula(S, B),
     write(S, ')').
+
 write_formula(S, implies(A,B)) :-
     write(S, '('),
     write_formula(S, A),
@@ -69,6 +104,7 @@ write_formula(S, implies(A,B)) :-
     format(S, ' ~w ', [Sym]),
     write_formula(S, B),
     write(S, ')').
+
 write_formula(S, dimplies(A,B)) :-
     write(S, '('),
     write_formula(S, A),
@@ -76,5 +112,13 @@ write_formula(S, dimplies(A,B)) :-
     format(S, ' ~w ', [Sym]),
     write_formula(S, B),
     write(S, ')').
+
+% ------------------------------------------------------------
+% Finalizar reporte LaTeX
+% ------------------------------------------------------------
+finish_latex_report(Path) :-
+    open(Path, append, S),
+    write(S, '\\end{document}\n'),
+    close(S).
 % ------------------------------------------------------------
 

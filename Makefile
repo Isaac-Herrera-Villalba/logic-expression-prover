@@ -1,4 +1,5 @@
-# Makefile — Parser + Evaluador + Reporte LaTeX
+# Makefile
+# Parser + Evaluador + Reporte LaTeX
 
 PYTHON      = python3
 SRC_DIR     = src
@@ -37,7 +38,8 @@ run:
 
 latex:
 	@echo "Compilando LaTeX..."
-	pdflatex -interaction=nonstopmode -output-directory=$(OUT_DIR) $(LATEX_FILE) >/dev/null
+	-@pdflatex -interaction=nonstopmode -output-directory=$(OUT_DIR) $(LATEX_FILE) >/dev/null 2>&1 || true
+
 
 view:
 	@echo "Abriendo PDF con zathura..."

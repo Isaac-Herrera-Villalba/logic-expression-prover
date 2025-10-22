@@ -1,46 +1,85 @@
 /*
-main.pl
+src/main.pl
+------------------------------------------------------------
+Punto de entrada principal
+Genera PDF con fórmulas lógicas y árbol de derivación para tautologías
 ------------------------------------------------------------
 */
 
 :- module(main, [run_all/0]).
 :- use_module(semantics).
+:- use_module(prover).
+:- use_module(latex).
 
-/*
- ------------------------------------------------------------
-Ejecutar todo el proceso:
-  - Cargar queries.pl
-  - Evaluar tautologías
-  - Generar reporte LaTeX
-------------------------------------------------------------
-*/
+% ------------------------------------------------------------
+% Predicado auxiliar para generar árbol simple de derivación
+% ------------------------------------------------------------
+formula_tree(F, tree(F, Subs)) :-
+    F =.. [Op,A,B],
+    member(Op,[and,or,implies,dimplies]),
+    formula_tree(A, TA),
+    formula_tree(B, TB),
+    Subs = [TA,TB].
+formula_tree(F, tree(F, [])) :-
+    atomic(F) ; F = neg(_).
+
+% ------------------------------------------------------------
+% Ejecutar todo el proceso:
+%   1. Cargar queries.pl
+%   2. Evaluar tautologías
+%   3. Generar PDF con árbol de derivación
+% ------------------------------------------------------------
 
 run_all :-
     QueriesFile = 'tmp/queries.pl',
-    OutFile = 'output/report.tex',
+    LatexFile  = 'output/report.tex',
     (exists_file(QueriesFile) ->
         consult(QueriesFile),
-        open(OutFile, write, S),
-        format(S, '\\documentclass[12pt]{article}~n', []),
-        format(S, '\\usepackage[utf8]{inputenc}~n', []),
-        format(S, '\\usepackage{amsmath,amssymb}~n', []),
-        format(S, '\\begin{document}~n', []),
-        format(S, '\\section*{Resultados de las fórmulas lógicas}~n~n', []),
+        start_latex_report(LatexFile),
         forall(query(F),
             (
-                (semantics:tautology(F) ->
-                    format(S, '\\( ~w \\) es una \\textbf{tautología}.~n~n', [F])
+                (tautology(F) ->
+                    derivation(F, Tree),          % <-- aquí usamos derivation/2
+                    add_formula(LatexFile, F, true, Tree)
                 ;
-                    format(S, '\\( ~w \\) \\textbf{no} es una tautología.~n~n', [F])
+                    add_formula(LatexFile, F, false)
                 )
             )
         ),
-        format(S, '\\end{document}~n', []),
-        close(S),
+        finish_latex_report(LatexFile),
         writeln('Archivo generado: output/report.tex')
     ;
         writeln('No se encontró el archivo tmp/queries.pl.'),
         fail
     ).
+
+% ------------------------------------------------------------
+% Procesar todas las queries de forma segura
+% ------------------------------------------------------------
+query_loop(LatexFile) :-
+    forall(query(F),
+        catch(process_formula(F, LatexFile), E,
+              (print_message(error, E), writeln('Error procesando fórmula'), fail))
+    ).
+
+% ------------------------------------------------------------
+% Procesa una fórmula individual
+% ------------------------------------------------------------
+process_formula(F, LatexFile) :-
+    (tautology(F) ->
+        (formula_tree_safe(F, Tree) ->
+            add_formula(LatexFile, F, true, Tree)
+        ;
+            add_formula(LatexFile, F, true)   % si no se puede generar árbol, se muestra solo la fórmula
+        )
+    ;
+        add_formula(LatexFile, F, false)
+    ).
+
+% ------------------------------------------------------------
+% Wrapper seguro para formula_tree/2
+% ------------------------------------------------------------
+formula_tree_safe(F, Tree) :-
+    catch(formula_tree(F, Tree), _, fail).
 % ------------------------------------------------------------
 
