@@ -1,11 +1,13 @@
 /*
-prover.pl
+ /src/prover.pl
 --------------------------------------------------
 Módulo de razonamiento lógico (Prover)
 --------------------------------------------------
 */
 
-:- module(prover, [prove/1]).
+
+% Aquí van todas las definiciones de prove/1 y derivation/2
+:- module(prover, [prove/1, derivation/2]).
 :- use_module('src/semantics.pl').
 
 /*
@@ -14,7 +16,7 @@ Declaración de operadores lógicos
 --------------------------------------------------
 */
 
-:- op(1,  fx,  neg).
+:- op(1, fx,  neg).
 :- op(2, xfy,  and).
 :- op(2, xfy,  or).
 :- op(2, xfy,  implies).
@@ -59,4 +61,33 @@ all_interpretations([A | As], Interps) :-
     findall([(A, false) | R], member(R, Rest), T2),
     append(T1, T2, Interps).
 % --------------------------------------------------
+
+% derivation(F, Tree)
+% Tree representa el árbol de evaluación de F
+derivation(atom(A), tree(atom(A), [])).
+derivation(neg(F), tree(neg(F), [Sub])) :-
+    derivation(F, Sub).
+derivation(and(A,B), tree(and(A,B), [SubA, SubB])) :-
+    derivation(A, SubA),
+    derivation(B, SubB).
+derivation(or(A,B), tree(or(A,B), [SubA, SubB])) :-
+    derivation(A, SubA),
+    derivation(B, SubB).
+derivation(implies(A,B), tree(implies(A,B), [SubA, SubB])) :-
+    derivation(A, SubA),
+    derivation(B, SubB).
+derivation(dimplies(A,B), tree(dimplies(A,B), [SubA, SubB])) :-
+    derivation(A, SubA),
+    derivation(B, SubB).
+
+% derivation(+Formula, -Tree)
+% Genera un árbol de derivación simple
+derivation(F, tree(F, Subs)) :-
+    F =.. [Op,A,B],
+    member(Op,[and,or,implies,dimplies]),
+    derivation(A, TA),
+    derivation(B, TB),
+    Subs = [TA, TB].
+derivation(F, tree(F, [])) :-
+    atomic(F) ; F = neg(_).
 

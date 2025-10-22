@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-parser.py
+ /src/parser.py
 
 Lee queries.txt (una fórmula por línea) y genera queries.pl con líneas: query(<term>).
 Soporta notaciones de palabras o símbolos y comentarios estilo Prolog:
@@ -129,9 +129,11 @@ class Parser:
 def ast_to_prolog(node):
     if node[0] == 'atom':
         name = node[1]
+        # Representar fórmulas atómicas como atom(<name>) para que coincidan
+        # con lo que espera logic.pl / semantics.pl.
         if re.fullmatch(r'[a-z][a-z0-9_]*', name):
-            return name
-        return f"'{name}'"
+            return f"atom({name})"
+        return f"atom('{name}')"
     elif node[0] == 'neg':
         return f"neg({ast_to_prolog(node[1])})"
     elif node[0] in ('and','or','implies','dimplies'):

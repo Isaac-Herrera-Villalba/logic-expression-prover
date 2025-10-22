@@ -1,5 +1,5 @@
 /*
-semantics.pl
+ /src/semantics.pl
 ------------------------------
 */
 :- module(semantics, [tautology/1, eval_formula/3]).
