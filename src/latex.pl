@@ -1,124 +1,130 @@
 /*
-src/latex.pl
-------------------------------------------------------------
-Convert proof tree into LaTeX using bussproofs
+ src/latex.pl
+ ------------------------------------------------------------
+ Módulo para generar reportes en LaTeX con fórmulas y derivaciones lógicas.
+ Genera un documento con encabezado, resultados y árboles de derivación.
+ ------------------------------------------------------------
 */
 
 :- module(latex, [
     start_latex_report/1,
-    add_formula/3,     % para fórmulas simples (sin árbol)
-    add_formula/4,     % para fórmulas verdaderas con árbol de derivación
+    add_formula/3,
+    add_formula/4,
     finish_latex_report/1
 ]).
 
-% Símbolos lógicos para LaTeX
-symbol(and, '\\land').
-symbol(or, '\\lor').
-symbol(neg, '\\lnot').
-symbol(implies, '\\rightarrow').
-symbol(dimplies, '\\leftrightarrow').
+% ------------------------------------------------------------
+% Inicia el archivo LaTeX con encabezado
+% ------------------------------------------------------------
+start_latex_report(File) :-
+    open(File, write, Stream),
+    format(Stream, '\\documentclass[12pt]{article}~n', []),
+    format(Stream, '\\usepackage[utf8]{inputenc}~n', []),
+    format(Stream, '\\usepackage{amsmath,amssymb,amsthm}~n', []),
+    format(Stream, '\\usepackage{bussproofs}~n', []),
+    format(Stream, '\\usepackage{geometry}~n', []),
+    format(Stream, '\\geometry{margin=2.5cm}~n~n', []),
+    format(Stream, '\\begin{document}~n', []),
+    format(Stream, '\\section*{Resultados de las fórmulas lógicas}~n~n', []),
+    close(Stream).
 
 % ------------------------------------------------------------
-% Inicio del reporte LaTeX
+% Agrega una fórmula al reporte (sin árbol)
 % ------------------------------------------------------------
-start_latex_report(Path) :-
-    open(Path, write, S),
-    write(S, '\\documentclass[12pt]{article}\n'),
-    write(S, '\\usepackage[utf8]{inputenc}\n'),
-    write(S, '\\usepackage{amsmath,amssymb}\n'),
-    write(S, '\\begin{document}\n'),
-    write(S, '\\section*{Resultados de las fórmulas lógicas}\n'),
-    close(S).
+add_formula(File, Formula, true) :-
+    open(File, append, Stream),
+    formula_to_tex(Formula, Tex),
+    format(Stream, '\\textit{$~w$} $\\Rightarrow$ \\textbf{Verdadero}~n~n', [Tex]),
+    close(Stream).
+
+add_formula(File, Formula, false) :-
+    open(File, append, Stream),
+    formula_to_tex(Formula, Tex),
+    format(Stream, '\\textit{$~w$} $\\Rightarrow$ \\textbf{Falso}~n~n', [Tex]),
+    close(Stream).
 
 % ------------------------------------------------------------
-% Añadir fórmula al reporte (sin árbol)
+% Agrega una fórmula al reporte con árbol de derivación
 % ------------------------------------------------------------
-add_formula(Path, Formula, true) :-
-    open(Path, append, S),
-    write(S, '\\noindent\n'),
-    write(S, '\\( '),
-    write_formula(S, Formula),
-    write(S, ' \\)'),
-    write(S, ' \\;\\Rightarrow\\; \\textbf{Verdadero}\\\\[6pt]\n'),
-    close(S).
+add_formula(File, Formula, true, Tree) :-
+    open(File, append, Stream),
+    formula_to_tex(Formula, Tex),
+    format(Stream, '\\textit{$~w$} $\\Rightarrow$ \\textbf{Verdadero}~n', [Tex]),
+    print_tree(Stream, Tree),
+    format(Stream, '\\vspace{1em}~n', []),
+    close(Stream).
 
-add_formula(Path, Formula, false) :-
-    open(Path, append, S),
-    write(S, '\\noindent\n'),
-    write(S, '\\( '),
-    write_formula(S, Formula),
-    write(S, ' \\)'),
-    write(S, ' \\;\\Rightarrow\\; \\textbf{Falso}\\\\[6pt]\n'),
-    close(S).
+add_formula(File, Formula, false, Tree) :-
+    open(File, append, Stream),
+    formula_to_tex(Formula, Tex),
+    format(Stream, '\\textit{$~w$} $\\Rightarrow$ \\textbf{Falso}~n', [Tex]),
+    print_tree(Stream, Tree),
+    format(Stream, '\\vspace{1em}~n', []),
+    close(Stream).
 
 % ------------------------------------------------------------
-% Añadir fórmula al reporte con árbol de derivación
+% Finaliza el documento LaTeX
 % ------------------------------------------------------------
-add_formula(Path, Formula, true, Tree) :-
-    open(Path, append, S),
-    write(S, '\\noindent\n'),
-    write(S, '\\( '),
-    write_formula(S, Formula),
-    write(S, ' \\)'),
-    write(S, ' \\;\\Rightarrow\\; \\textbf{Verdadero}\\\\[6pt]\n'),
-    write_derivation(S, Tree),
-    close(S).
+finish_latex_report(File) :-
+    open(File, append, Stream),
+    format(Stream, '\\end{document}~n', []),
+    close(Stream).
 
 % ------------------------------------------------------------
-% Función recursiva para imprimir árbol de derivación en LaTeX con \overline{}
+% Imprime árbol de derivación en formato escalonado con "⊢"
 % ------------------------------------------------------------
-write_derivation(S, tree(F, Subs)) :-
-    format(S, '\\overline{~w}\\\\\n', [F]),
-    forall(member(Sub, Subs), write_derivation(S, Sub)).
+print_tree(Stream, Tree) :-
+    format(Stream, '\\begin{center}\\renewcommand{\\arraystretch}{1.1}~n', []),
+    print_tree_level(Stream, Tree, 0),
+    format(Stream, '\\end{center}~n', []).
 
-% ------------------------------------------------------------
-% Función para imprimir fórmulas en notación bonita
-% ------------------------------------------------------------
-write_formula(S, atom(X)) :- write(S, X).
-
-write_formula(S, neg(F)) :-
-    symbol(neg, Sym),
-    format(S, '~w ', [Sym]),
-    write_formula(S, F).
-
-write_formula(S, and(A,B)) :-
-    write(S, '('),
-    write_formula(S, A),
-    symbol(and, Sym),
-    format(S, ' ~w ', [Sym]),
-    write_formula(S, B),
-    write(S, ')').
-
-write_formula(S, or(A,B)) :-
-    write(S, '('),
-    write_formula(S, A),
-    symbol(or, Sym),
-    format(S, ' ~w ', [Sym]),
-    write_formula(S, B),
-    write(S, ')').
-
-write_formula(S, implies(A,B)) :-
-    write(S, '('),
-    write_formula(S, A),
-    symbol(implies, Sym),
-    format(S, ' ~w ', [Sym]),
-    write_formula(S, B),
-    write(S, ')').
-
-write_formula(S, dimplies(A,B)) :-
-    write(S, '('),
-    write_formula(S, A),
-    symbol(dimplies, Sym),
-    format(S, ' ~w ', [Sym]),
-    write_formula(S, B),
-    write(S, ')').
+print_tree_level(Stream, tree(F, []), _) :-
+    formula_to_tex(F, TexF),
+    format(Stream, '\\underline{$~w$}\\\\~n', [TexF]).
+print_tree_level(Stream, tree(F, Subs), Depth) :-
+    NewDepth is Depth + 1,
+    forall(member(Sub, Subs),
+        print_tree_level(Stream, Sub, NewDepth)
+    ),
+    indent(Depth, Indent),
+    formula_to_tex(F, TexF),
+    (Subs \= [] ->
+        format(Stream, '{~w\\underline{$\\vdash~w$}}\\\\~n', [Indent, TexF])
+    ;
+        format(Stream, '{~w\\underline{$~w$}}\\\\~n', [Indent, TexF])
+    ).
 
 % ------------------------------------------------------------
-% Finalizar reporte LaTeX
+% Añade espacios para centrar visualmente las fórmulas (pirámide)
 % ------------------------------------------------------------
-finish_latex_report(Path) :-
-    open(Path, append, S),
-    write(S, '\\end{document}\n'),
-    close(S).
-% ------------------------------------------------------------
+indent(Depth, Indent) :-
+    Spaces is Depth * 6,   % ajusta este número si quieres más o menos desplazamiento
+    length(L, Spaces),
+    maplist(=(' '), L),
+    atom_chars(Indent, L).
 
+% ------------------------------------------------------------
+% Convierte los predicados Prolog en notación matemática LaTeX
+% ------------------------------------------------------------
+formula_to_tex(atom(X), T) :- format(atom(T), '~w', [X]).
+formula_to_tex(neg(X), T) :-
+    formula_to_tex(X, TX),
+    format(atom(T), '(\\neg ~w)', [TX]).
+
+formula_to_tex(and(A,B), T) :-
+    formula_to_tex(A, TA),
+    formula_to_tex(B, TB),
+    format(atom(T), '(~w \\wedge ~w)', [TA, TB]).
+formula_to_tex(or(A,B), T) :-
+    formula_to_tex(A, TA),
+    formula_to_tex(B, TB),
+    format(atom(T), '(~w \\vee ~w)', [TA, TB]).
+formula_to_tex(implies(A,B), T) :-
+    formula_to_tex(A, TA),
+    formula_to_tex(B, TB),
+    format(atom(T), '(~w \\rightarrow ~w)', [TA, TB]).
+formula_to_tex(dimplies(A,B), T) :-
+    formula_to_tex(A, TA),
+    formula_to_tex(B, TB),
+    format(atom(T), '(~w \\leftrightarrow ~w)', [TA, TB]).
+formula_to_tex(X, T) :- format(atom(T), '~w', [X]).
