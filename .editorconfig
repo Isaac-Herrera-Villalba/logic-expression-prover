@@ -1,3 +1,4 @@
+# .editorconfig
 # EditorConfig ayuda a mantener estilos de codificación consistentes entre editores
 root = true
 
@@ -12,14 +13,14 @@ indent_style = space
 indent_size = 4
 
 ######################################
-# Archivos de texto plano y markdown
+# FIcheros de texto plano y markdown
 [*.{md,txt}]
 # Evita borrar espacios en blanco en listas o poesía
 trim_trailing_whitespace = false
 max_line_length = 80
 
 ######################################
-# Archivos Python
+# Ficheros Python
 [*.py]
 indent_style = space
 indent_size = 4
@@ -29,7 +30,7 @@ trim_trailing_whitespace = true
 insert_final_newline = true
 
 ######################################
-# Archivos Prolog
+# Ficheros Prolog
 [*.pl]
 indent_style = space
 indent_size = 4
@@ -37,14 +38,14 @@ insert_final_newline = true
 trim_trailing_whitespace = true
 
 ######################################
-# Archivos Makefile
+# Ficheros Makefile
 [Makefile]
 # Make requiere tabs para las reglas
 indent_style = tab
 trim_trailing_whitespace = false
 
 ######################################
-# Archivos LaTeX
+# Ficheros LaTeX
 [*.tex]
 indent_style = space
 indent_size = 2

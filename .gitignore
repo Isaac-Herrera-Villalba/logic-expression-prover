@@ -4,6 +4,6 @@
 *.pdf
 *.tex
 /tmp/queries.pl
-/output/
 /tmp/
+/output/
 

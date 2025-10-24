@@ -1,5 +1,10 @@
 # Makefile
-# Parser + Evaluador + Reporte LaTeX
+# -----------------------------------------------------------------------
+# Descripción:
+# Este fichero automatiza el proceso de ejecución del proyecto,
+# incluyendo el análisis de consultas, evaluación lógica y generación
+# del reporte final en PDF mediante LaTeX.
+# -----------------------------------------------------------------------
 
 PYTHON      = python3
 SRC_DIR     = src
@@ -21,12 +26,12 @@ help:
 	@echo "  make parse  -> Ejecuta parser Python (genera $(TMP_FILE))"
 	@echo "  make run    -> Ejecuta Prolog (genera $(LATEX_FILE))"
 	@echo "  make latex  -> Compila $(LATEX_FILE) a PDF"
-	@echo "  make view   -> Abre el PDF con zathura"
+	@echo "  make view   -> Abre el PDF con okular"
 	@echo "  make full   -> Ejecuta todo el flujo (parse + run + latex + view)"
-	@echo "  make clean  -> Limpia archivos generados (sin borrar carpetas)"
+	@echo "  make clean  -> Limpia directorios generados"
 
 parse:
-	@echo "Creando directorio temporal si no existe..."
+	@echo "Creando directorios temporales si no existen..."
 	mkdir -p $(TMP_DIR)
 	mkdir -p $(OUT_DIR)
 	@echo "Ejecutando parser..."
@@ -42,8 +47,8 @@ latex:
 
 
 view:
-	@echo "Abriendo PDF con zathura..."
-	zathura $(PDF_FILE) &
+	@echo "Abriendo PDF con okular..."
+	okular $(PDF_FILE) &
 
 full: parse run latex view
 
@@ -51,5 +56,4 @@ clean:
 	@echo "Eliminando archivos generados..."
 	rm -rf $(TMP_DIR)
 	rm -rf $(OUT_DIR)
-############################################
 

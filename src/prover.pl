@@ -1,43 +1,32 @@
 /*
- /src/prover.pl
---------------------------------------------------
-Módulo de razonamiento lógico (Prover)
---------------------------------------------------
+ src/prover.pl
+ --------------------------------------------------
+ Descripción:
+
+ Módulo de razonamiento lógico (Prover) encargado de evaluar
+ fórmulas proposicionales bajo todas las interpretaciones
+ posibles y generar árboles de derivación estructurados.
+ --------------------------------------------------
 */
 
-
-% Aquí van todas las definiciones de prove/1 y derivation/2
 :- module(prover, [prove/1, derivation/2]).
 :- use_module('src/semantics.pl').
 
-/*
---------------------------------------------------
-Declaración de operadores lógicos
---------------------------------------------------
-*/
-
-:- op(1, fx,  neg).
+% Declaración de operadores lógicos
+:- op(1, fx,   neg).
 :- op(2, xfy,  and).
 :- op(2, xfy,  or).
 :- op(2, xfy,  implies).
 :- op(2, xfy,  dimplies).
 
-/*
---------------------------------------------------
-Probar una expresión booleana bajo todas las interpretaciones
---------------------------------------------------
-*/
+% Verifica si una expresión es verdadera en todas las interpretaciones
 prove(Expr) :-
     get_atoms(Expr, Atoms),
     all_interpretations(Atoms, Interps),
     forall(member(Interp, Interps),
-           ( eval(Expr, Interp, true) )).
+           eval(Expr, Interp, true)).
 
-/*
---------------------------------------------------
-Obtención de átomos (variables lógicas)
---------------------------------------------------
-*/
+% Obtiene todos los átomos presentes en una expresión
 get_atoms(Expr, Atoms) :-
     get_atoms(Expr, [], Raw),
     sort(Raw, Atoms).
@@ -49,21 +38,15 @@ get_atoms(A implies B, Acc, Out) :- !, get_atoms(A, Acc, T1), get_atoms(B, T1, O
 get_atoms(A dimplies B, Acc, Out) :- !, get_atoms(A, Acc, T1), get_atoms(B, T1, Out).
 get_atoms(A, Acc, [A | Acc]) :- atom(A).
 
-/*
---------------------------------------------------
-Generar todas las interpretaciones posibles
---------------------------------------------------
-*/
+% Genera todas las interpretaciones posibles de una lista de átomos
 all_interpretations([], [[]]).
 all_interpretations([A | As], Interps) :-
     all_interpretations(As, Rest),
     findall([(A, true) | R], member(R, Rest), T1),
     findall([(A, false) | R], member(R, Rest), T2),
     append(T1, T2, Interps).
-% --------------------------------------------------
 
-% derivation(F, Tree)
-% Tree representa el árbol de evaluación de F
+% Genera un árbol de derivación para una fórmula lógica
 derivation(atom(A), tree(atom(A), [])).
 derivation(neg(F), tree(neg(F), [Sub])) :-
     derivation(F, Sub).
@@ -80,8 +63,7 @@ derivation(dimplies(A,B), tree(dimplies(A,B), [SubA, SubB])) :-
     derivation(A, SubA),
     derivation(B, SubB).
 
-% derivation(+Formula, -Tree)
-% Genera un árbol de derivación simple
+% Derivación genérica: construye el árbol según el operador lógico principal
 derivation(F, tree(F, Subs)) :-
     F =.. [Op,A,B],
     member(Op,[and,or,implies,dimplies]),

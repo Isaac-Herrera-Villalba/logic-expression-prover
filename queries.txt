@@ -1,27 +1,57 @@
 /* 
 queries.txt
-Ejemplo de archivo de consultas
+-----------------------------------------------------------------------
+Descripción:
+
+Este fichero contiene las fórmulas y secuentes que serán evaluados por el sistema.
+Cada línea representa una consulta lógica:
+
+— Las fórmulas de lógica proposicional se usan para comprobar si es 
+  ∙ Válido (Tautología),
+  ∙ Satisfacibilidad (Contingente) [Verdad en por lo menos una asignación pero no en todas]
+  ∙ Insatisfacible (Contradicción/Falsedad). 
+
+— Los secuentes se utilizan para verificar
+  su demostrabilidad en el cálculo de secuentes (LKP).
+
+Este fichero define todos los casos de prueba que el sistema
+procesará y analizará en busca de resultados lógicos.
+-----------------------------------------------------------------------
 */
-% Comentario de una sola línea
 
-a and (b or c) <-> (a and b) or (a and c)
-neg(a and b) <-> (neg a or neg b)
+% Lógica Proposicional
+((p → q) ∧ p) ∧ ¬q
+((p -> q) and (q -> r)) -> (p -> r)
+neg(p and q) <-> (neg(p) or neg(q))
+((p -> q) -> q) -> q
+((p -> q) -> p) -> q
+(p ↔ (q ∧ ¬q))
+(p or neg(q and r)) -> ((p <-> r) or q)
+(p and q) -> (p or r)
+(p ↔ q) ∧ (p ↔ ¬q)
+(p -> q) or (q -> p)
+(p -> q) <-> (neg(q) -> p)
+((neg(p) -> q) and (neg(p) -> neg(q))) -> p
+((p -> q) -> q) -> p
+((q -> r) -> (p -> q)) -> (p -> q)
+p -> (q -> (q -> p))
+p ∧ ¬p
+(p <-> q) <-> (p <-> (q <-> p))
+neg(p -> q) -> p
 
-p or neg p           % Tautología
-(a -> a)             % Siempre verdadero
-
-/* 
-Comentario
-de varias
-líneas
-*/
-
-(a and b) -> a       % Verdadero si a y b son verdaderos
-(a implies b) dimplies (neg b implies a)
-(c and (d or e))
-
-% Ejemplos adicionales para verificar falsedad y verdad
-p and neg p           % Contradicción (falso)
-(a implies (b and neg b))  % Contradicción
-% --------------------------------------------------
+% LPK: Secuentes 
+p |- p
+(p -> q), p |- q
+|- (p -> q) -> (¬q -> ¬p)
+(p ∧ q) |- p
+p |- (q -> p)
+(p ∧ q) |- (p ∨ r)
+|- (p ∨ ¬p)
+p |- (p ∨ q)
+(p -> q), (q -> r) |- (p -> r)
+|- (p ∧ q) -> p
+p |- ¬¬p
+q |- (p -> q)
+(p -> q), (p ∨ r) |- (q ∨ r)
+(p ∧ (p -> q)) |- q
 

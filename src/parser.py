@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """
- /src/parser.py
+ src/parser.py
+ ------------------------------------------------------------
+ Descripción:
 
-Lee queries.txt (una fórmula por línea) y genera queries.pl con líneas: query(<term>).
-Soporta notaciones de palabras o símbolos y comentarios estilo Prolog:
-  - Comentarios de línea: % esto es un comentario
-  - Comentarios de bloque: /* comentario
-                           en varias líneas */
+ Analizador sintáctico que lee el archivo queries.txt y genera
+ tmp/queries.pl con las consultas convertidas a términos Prolog.
+
+ Cada línea puede ser:
+   - Una fórmula proposicional.
+   - Un secuente del cálculo LKP (Γ ⊢ Δ).
+
+ El módulo reconoce tanto símbolos lógicos como palabras clave
+ y permite comentarios de una o varias líneas.
+ ------------------------------------------------------------
 """
 
 import re
 import sys
 from pathlib import Path
 
+# Definición de los tokens aceptados
 TOKEN_SPEC = [
     ('LPAREN',     r'\('),
     ('RPAREN',     r'\)'),
@@ -33,6 +41,7 @@ TOKEN_SPEC = [
 
 TOKEN_RE = re.compile('|'.join('(?P<%s>%s)' % pair for pair in TOKEN_SPEC))
 
+# Representa un token del analizador
 class Token:
     def __init__(self, typ, val, pos):
         self.type = typ
@@ -41,6 +50,7 @@ class Token:
     def __repr__(self):
         return f"Token({self.type},{self.value!r},{self.pos})"
 
+# Convierte una cadena en una lista de tokens
 def tokenize(s):
     tokens = []
     for mo in TOKEN_RE.finditer(s):
@@ -55,6 +65,7 @@ def tokenize(s):
     tokens.append(Token('EOF', '', len(s)))
     return tokens
 
+# Analizador recursivo para construir el árbol sintáctico
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -77,7 +88,7 @@ class Parser:
     def parse_dimplies(self):
         left = self.parse_implies()
         if self.cur().type in ('DIMPL','DIMPL_W'):
-            op = self.eat('DIMPL','DIMPL_W')
+            self.eat('DIMPL','DIMPL_W')
             right = self.parse_dimplies()
             return ('dimplies', left, right)
         return left
@@ -126,11 +137,10 @@ class Parser:
             return ('atom', name)
         raise SyntaxError(f"Unexpected token {t.type}({t.value}) at pos {t.pos}")
 
+# Convierte un árbol sintáctico a un término Prolog
 def ast_to_prolog(node):
     if node[0] == 'atom':
         name = node[1]
-        # Representar fórmulas atómicas como atom(<name>) para que coincidan
-        # con lo que espera logic.pl / semantics.pl.
         if re.fullmatch(r'[a-z][a-z0-9_]*', name):
             return f"atom({name})"
         return f"atom('{name}')"
@@ -141,27 +151,18 @@ def ast_to_prolog(node):
     else:
         raise ValueError(f"Unknown node type {node[0]}")
 
-def parse_line_to_prolog(line):
-    tokens = tokenize(line)
+# Procesa texto plano y devuelve su representación Prolog
+def parse_formula_text(s):
+    tokens = tokenize(s)
     p = Parser(tokens)
     ast = p.parse()
     return ast_to_prolog(ast)
 
+# Elimina comentarios de línea o bloque
 def strip_comments(text):
-    """
-    Remove Prolog-style comments:
-      - block comments /* ... */ (multiline)
-      - line comments starting with %
-      - also keep support for // style as before
-    """
-    # remove block comments first (/* ... */), non-greedy, DOTALL to span newlines
     text_no_block = re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
-    # remove % comments (from % to end of line)
     lines = []
     for line in text_no_block.splitlines():
-        # keep // comments removal too (existing behavior)
-        # take portion before % or // (the earliest)
-        # find index of '%' and '//' if present
         idx_percent = line.find('%')
         idx_slash = line.find('//')
         cut = None
@@ -171,38 +172,46 @@ def strip_comments(text):
             cut = idx_percent
         elif idx_slash != -1:
             cut = idx_slash
-        if cut is not None:
-            lines.append(line[:cut])
-        else:
-            lines.append(line)
+        lines.append(line[:cut] if cut is not None else line)
     return "\n".join(lines)
 
+# Determina si una línea es fórmula o secuente y genera el hecho Prolog
+def parse_sequent_or_formula(line):
+    if ('|-' in line) or ('⊢' in line):
+        left_str, right_str = re.split(r'\s*\|-\s*|\s*⊢\s*', line)
+        gamma = [x.strip() for x in left_str.split(',') if x.strip()]
+        delta = [x.strip() for x in right_str.split(',') if x.strip()]
+        gamma_terms = ",".join(parse_formula_text(f) for f in gamma)
+        delta_terms = ",".join(parse_formula_text(f) for f in delta)
+        return f"query(sequent, seq([{gamma_terms}],[{delta_terms}]))."
+    else:
+        term = parse_formula_text(line)
+        return f"query(formula, {term})."
+
+# Procesa el archivo de entrada y genera tmp/queries.pl
 def process_file(inp_path, out_path, verbose=True):
     raw = inp_path.read_text(encoding='utf8')
     cleaned = strip_comments(raw)
-    lines = cleaned.splitlines()
+    lines = [ln.strip() for ln in cleaned.splitlines() if ln.strip()]
     seen = set()
     out_lines = []
-    for i, line in enumerate(lines, start=1):
-        s = line.strip()
-        if s == '':
-            continue
+    for i, s in enumerate(lines, start=1):
         try:
-            term = parse_line_to_prolog(s)
-            if term not in seen:
-                seen.add(term)
-                out_lines.append(f"query({term}).")
+            fact = parse_sequent_or_formula(s)
+            if fact not in seen:
+                seen.add(fact)
+                out_lines.append(fact)
             if verbose:
-                print(f"[OK] Line {i}: {s}  -> query({term}).")
+                print(f"[OK] Line {i}: {s} -> {fact}")
         except Exception as e:
             print(f"[ERR] Line {i}: {e}")
-    out_path.write_text("\n".join(out_lines)+"\n", encoding='utf8')
+    out_path.write_text("\n".join(out_lines) + "\n", encoding='utf8')
 
+# Punto de entrada principal
 if __name__ == '__main__':
-    inp = Path(sys.argv[1]) if len(sys.argv)>1 else Path('queries.txt')
-    outp = Path(sys.argv[2]) if len(sys.argv)>2 else Path('tmp/queries.pl')
+    inp = Path(sys.argv[1]) if len(sys.argv) > 1 else Path('queries.txt')
+    outp = Path(sys.argv[2]) if len(sys.argv) > 2 else Path('tmp/queries.pl')
     inp.parent.mkdir(exist_ok=True)
     outp.parent.mkdir(exist_ok=True)
     process_file(inp, outp)
-###########################################
 
